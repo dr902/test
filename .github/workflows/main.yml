@@ -37,7 +37,7 @@ jobs:
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-        Date_TAG: $(date +'%Y.%m.%d.%H_%M')
+        Date_TAG: $(date +'%Y.%m.%d.%H.%M')
       run: |
         echo "date now : $Date_TAG"
         # Build the Docker image
