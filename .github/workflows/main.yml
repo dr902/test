@@ -45,6 +45,7 @@ jobs:
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION .
         # Tag the image as latest
         docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION $ECR_REGISTRY/$ECR_REPOSITORY:$TIMESTAMP
         # Push the image to ECR
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$TIMESTAMP
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
