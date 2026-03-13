@@ -39,12 +39,13 @@ jobs:
         ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
         Date_TAG: $(date +'%Y.%m.%d.%H.%M')
       run: |
-        echo "date now $Date_TAG "
+        echo "TIMESTAMP=$(date +'%Y.%m.%d.%H.%M')" >> $GITHUB_ENV
+        
         # Build the Docker image
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         # Tag the image as latest
         docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
         # Push the image to ECR
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$Date_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$TIMESTAMP
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION
