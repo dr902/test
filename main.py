@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+from typing import Optional
 
 app = FastAPI()
 
 class Item(BaseModel):
     name: str
-    description: str | None = None
+    description: Optional[str] = None
 
 @app.get("/")
 def read_root():
