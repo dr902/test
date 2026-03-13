@@ -39,7 +39,7 @@ jobs:
         ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
         Date_TAG: $(date +'%Y.%m.%d.%H.%M')
       run: |
-        echo "date now : $Date_TAG"
+        echo "date now $Date_TAG "
         # Build the Docker image
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         # Tag the image as latest
