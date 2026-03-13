@@ -11,6 +11,7 @@ on:
 env:
   AWS_REGION: us-east-1  # Replace with your AWS region
   ECR_REPOSITORY: vars3.0-test-repo  # Replace with your ECR repository name
+  VERSION: 1.0.${{ github.run_number }}
 
 jobs:
   build-and-push:
@@ -36,12 +37,14 @@ jobs:
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-        IMAGE_TAG: ${{ github.sha }}
+        Date_TAG: $(date +'%Y.%m.%d.%H_%M')
       run: |
+        echo "date now : $Date_TAG"
         # Build the Docker image
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         # Tag the image as latest
         docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
         # Push the image to ECR
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$Date_TAG
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION
