@@ -15,7 +15,7 @@ env:
   Task_Definition: VARS3-0-Test-Task
   Cluster: VARS3-0-Test-Cluster
   Service: VARS3-0-Test-Service
-  account-id: 366115556563
+  account_id: 366115556563
   
 
 jobs:
@@ -82,7 +82,7 @@ jobs:
       - name: Update image in task definition
       
         run: |
-          IMAGE= arn:aws:ecr:${{ env.AWS_REGION }}:$account-id:repository/${{ env.ECR_REPOSITORY }}:$VERSION
+          IMAGE= arn:aws:ecr:${{ env.AWS_REGION }}:$account_id:repository/${{ env.ECR_REPOSITORY }}:$VERSION
           echo "Latest ECR image ARN : $IMAGE"
           cat task-definition.json | \
           jq --arg IMAGE "$IMAGE" \
