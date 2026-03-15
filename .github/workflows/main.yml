@@ -80,9 +80,10 @@ jobs:
             > task-definition.json
   
       - name: Update image in task definition
-      
+        env:
+          IMAGE: arn:aws:ecr:${{ env.AWS_REGION }}:$account_id:repository/${{ env.ECR_REPOSITORY }}:$VERSION
+
         run: |
-          IMAGE= arn:aws:ecr:${{ env.AWS_REGION }}:$account_id:repository/${{ env.ECR_REPOSITORY }}:$VERSION
           echo "Latest ECR image ARN : $IMAGE"
           cat task-definition.json | \
           jq --arg IMAGE "$IMAGE" \
