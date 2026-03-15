@@ -50,3 +50,57 @@ jobs:
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$TIMESTAMP
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION
+        
+        
+  deploy:
+      runs-on: ubuntu-latest
+      environment: VARS3.0
+  
+      steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+  
+      - name: Get current task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition my-task-family \
+            --query taskDefinition \
+            > task-definition.json
+  
+      - name: Update image in task definition
+        run: |
+          IMAGE= $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION
+          cat task-definition.json | \
+          jq --arg IMAGE "$IMAGE" \
+          '.containerDefinitions[0].image=$IMAGE |
+          del(.taskDefinitionArn,.revision,.status,.requiresAttributes,.compatibilities,.registeredAt,.registeredBy)' \
+          > new-task-definition.json
+  
+      - name: Register new task definition
+        run: |
+          TASK_DEF_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://new-task-definition.json \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+  
+          echo "TaskDefinition: $TASK_DEF_ARN "
+  
+      - name: Update ECS service
+        run: |
+          aws ecs update-service \
+            --cluster my-cluster \
+            --service my-service \
+            --task-definition $TASK_DEF_ARN
+  
+      - name: Wait for deployment
+        run: |
+          aws ecs wait services-stable \
+            --cluster my-cluster \
+            --services my-service
+  
+      - name: Deployment successful
+        run: echo "ECS deployment completed successfully 🚀"
