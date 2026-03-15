@@ -10,7 +10,7 @@ class Item(BaseModel):
 
 @app.get("/")
 def read_root():
-    return {"message": "Hello from API"}
+    return {"message": "Hello from API, This is updated version"}
 
 @app.get("/items/{item_id}")
 def read_item(item_id: int):
