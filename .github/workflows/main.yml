@@ -12,6 +12,11 @@ env:
   AWS_REGION: us-east-1  # Replace with your AWS region
   ECR_REPOSITORY: vars3.0-test-repo  # Replace with your ECR repository name
   VERSION: 3.0.${{ github.run_number }}
+  Task_Definition: VARS3-0-Test-Task
+  Cluster: VARS3-0-Test-Cluster
+  Service: VARS3-0-Test-Service
+  account-id: 366115556563
+  
 
 jobs:
   build-and-push:
@@ -67,13 +72,15 @@ jobs:
       - name: Get current task definition
         run: |
           aws ecs describe-task-definition \
-            --task-definition my-task-family \
+            --task-definition ${{ env.Task_Definition }} \
             --query taskDefinition \
             > task-definition.json
   
       - name: Update image in task definition
+      
         run: |
-          IMAGE= $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION
+          IMAGE= arn:aws:ecr:${{ env.AWS_REGION }}:$account-id:repository/${{ env.ECR_REPOSITORY }}:$VERSION
+          echo "Latest ECR image ARN : $IMAGE"
           cat task-definition.json | \
           jq --arg IMAGE "$IMAGE" \
           '.containerDefinitions[0].image=$IMAGE |
@@ -92,15 +99,15 @@ jobs:
       - name: Update ECS service
         run: |
           aws ecs update-service \
-            --cluster my-cluster \
-            --service my-service \
+            --cluster ${{ env.Cluster }} \
+            --service ${{ env.Service }} \
             --task-definition $TASK_DEF_ARN
   
       - name: Wait for deployment
         run: |
           aws ecs wait services-stable \
-            --cluster my-cluster \
-            --services my-service
+            --cluster ${{ env.Cluster }} \
+            --service ${{ env.Service }} 
   
       - name: Deployment successful
         run: echo "ECS deployment completed successfully 🚀"
