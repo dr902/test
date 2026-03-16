@@ -40,7 +40,7 @@ jobs:
         run: |
               # Create a timestamp
               TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')
-              Version = 3.0.${{ github.run_number }}
+              Version=3.0.${{ github.run_number }}
               BACKUP_FOLDER="backups/run-$Version_${TIMESTAMP}"
               
               echo "Backing up current files to: $BACKUP_FOLDER"
