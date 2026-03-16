@@ -36,8 +36,24 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Upload to S3
-        run: aws s3 sync dist/ s3://${{ env.S3_BUCKET_NAME }} --delete
+      - name: Backup Current S3 Content
+        run: |
+              # Create a timestamp
+              TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')
+              BACKUP_FOLDER="backups/run-${{ github.run_id }}_${TIMESTAMP}"
+              
+              echo "Backing up current files to: $BACKUP_FOLDER"
+              
+              # Copy existing files to the backup subfolder within the same bucket
+              # We exclude the 'backups/' directory itself to avoid recursive backups
+              aws s3 cp s3://${{ env.S3_BUCKET_NAME }}/ s3://${{ env.S3_BUCKET_NAME }}/$BACKUP_FOLDER/ --recursive --exclude "backups/*"
+
+      - name: Upload to S3 (Sync)
+        run: |
+          # We sync 'dist' to the root of the bucket
+          # EXTREMELY IMPORTANT: --exclude "backups/*" ensures the sync 
+          # doesn't delete the backup folder we just created.
+          aws s3 sync dist/ s3://${{ env.S3_BUCKET_NAME }}/ --delete --exclude "backups/*"
 
       - name: Start CloudFront Invalidation
         id: invalidate
