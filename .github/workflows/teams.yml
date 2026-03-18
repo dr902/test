@@ -1,3 +1,4 @@
+name: Teams notification
 on:
   workflow_dispatch:
 
