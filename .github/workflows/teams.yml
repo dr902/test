@@ -1,9 +1,14 @@
 name: Teams notification
 on:
   workflow_dispatch:
-
+    inputs:
+      Version:
+        description: 'Please Mention Version here '
+        required: true
+        type: string
+        
 jobs:
-  teams:
+  teams:  
     runs-on: ubuntu-22.04
 
     steps:
@@ -11,7 +16,7 @@ jobs:
         uses: mikesprague/teams-incoming-webhook-action@v1
         with:
           github-token: ${{ github.token }}
-          webhook-url: https://defaultbaa801264ba14c9aa0660f98246f8a.6e.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/1911811be3b3490ab3e5700ce608ccc8/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=PVUYsEHipvBuyG65SQbB9w-5AyugK81I4cS7TfZ0IIw
-          message: "Hello"
+          webhook-url: ${{secrets.TEAMS_WEBHOOK_URL}}
+          message: "Hello, The changes got updates woth v - ${{github.event.inputs.Version}} "
           title: "Manual Notification"
           
