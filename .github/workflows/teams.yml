@@ -1,0 +1,18 @@
+on:
+  workflow_dispatch:
+
+jobs:
+  teams:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Notify Teams
+        # You may pin to the exact commit or the version.
+        # uses: thechetantalwar/teams-notify@8a78811f5e8f58cdd204efebd79158006428c46b
+        uses: thechetantalwar/teams-notify@v2
+        with:
+          # WebHook URL of your MS Teams Channel
+          teams_webhook_url: https://defaultbaa801264ba14c9aa0660f98246f8a.6e.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/1911811be3b3490ab3e5700ce608ccc8/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=PVUYsEHipvBuyG65SQbB9w-5AyugK81I4cS7TfZ0IIw
+          # Message to be sent
+          message: "Hello"
+          
