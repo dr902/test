@@ -10,6 +10,7 @@ on:
 jobs:
   teams:  
     runs-on: ubuntu-22.04
+    environment: VARS3.0
 
     steps:
       - name: Notify Teams
