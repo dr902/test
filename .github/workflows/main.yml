@@ -25,7 +25,17 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
+      
+    # 1. NOTIFY STARTED
+    - name: Notify Teams - Started
+      uses: mikesprague/teams-incoming-webhook-action@v1
+      with:
+        github-token: ${{ github.token }}
+        webhook-url: ${{ secrets.TEAMS_WEBHOOK_URL }}
+        title: "🚀 Workflow Started"
+        message: "Starting Build & Push for version **${{ env.VERSION }}** in **${{ github.repository }}**"
+        color: "info"
+    
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
@@ -53,6 +63,17 @@ jobs:
         docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:${{ env.VERSION }}
         docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest
         docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$TIMESTAMP
+        
+     # 2. NOTIFY IF BUILD FAILS
+    - name: Notify Teams - Build Failed
+      if: failure()
+      uses: mikesprague/teams-incoming-webhook-action@v1
+      with:
+        github-token: ${{ github.token }}
+        webhook-url: ${{ secrets.TEAMS_WEBHOOK_URL }}
+        title: "❌ Build Failed"
+        message: "The Docker Build or Push stage failed for version ${{ env.VERSION }}."
+        color: "failure"
 
   deploy:
       runs-on: ubuntu-latest
@@ -115,3 +136,18 @@ jobs:
   
       - name: Deployment successful
         run: echo "ECS deployment completed successfully 🚀"
+
+      - name: Notify Teams (Final Status)
+        if: always() # This ensures it runs even if previous steps failed
+        uses: mikesprague/teams-incoming-webhook-action@v1
+        with:
+          github-token: ${{ github.token }}
+          webhook-url: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          # Dynamic title and color based on the job status
+          title: "${{ job.status == 'success' && '✅ Deployment Success' || '❌ Deployment Failed' }}"
+          color: "${{ job.status == 'success' && 'success' || 'failure' }}"
+          message: "VARS 3.0 Version **${{ env.VERSION }}** finished with status: **${{ job.status }}**"
+    
+
+
+    
