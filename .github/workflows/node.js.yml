@@ -10,7 +10,7 @@ jobs:
     environment: VARS3.0
 
     env:
-      CLOUDFRONT_DISTRIBUTION_ID: E3373XJYHACBCI
+      CLOUDFRONT_DISTRIBUTION_ID: E2IL75NR0U8QP3
       S3_BUCKET_NAME: vars3-0-test-appbucket-7dc31470
       AWS_REGION: us-east-1
       Version: 3.0.${{ github.run_number }}
