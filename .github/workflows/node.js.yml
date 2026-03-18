@@ -11,7 +11,7 @@ jobs:
 
     env:
       CLOUDFRONT_DISTRIBUTION_ID: E3373XJYHACBCI
-      S3_BUCKET_NAME: vars3-0-test-appbucket-3d591970
+      S3_BUCKET_NAME: vars3-0-test-appbucket-7dc31470
       AWS_REGION: us-east-1
       Version: 3.0.${{ github.run_number }}
 
