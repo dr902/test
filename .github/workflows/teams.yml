@@ -11,7 +11,7 @@ jobs:
         uses: mikesprague/teams-incoming-webhook-action@v1
         with:
           github-token: ${{ github.token }}
-          teams_webhook_url: https://defaultbaa801264ba14c9aa0660f98246f8a.6e.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/1911811be3b3490ab3e5700ce608ccc8/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=PVUYsEHipvBuyG65SQbB9w-5AyugK81I4cS7TfZ0IIw
+          webhook-url: https://defaultbaa801264ba14c9aa0660f98246f8a.6e.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/1911811be3b3490ab3e5700ce608ccc8/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=PVUYsEHipvBuyG65SQbB9w-5AyugK81I4cS7TfZ0IIw
           message: "Hello"
           title: "Manual Notification"
           
