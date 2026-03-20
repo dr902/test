@@ -2,10 +2,12 @@ name: Teams notification
 on:
   workflow_dispatch:
     inputs:
-      Version:
-        description: 'Please Mention Version here '
+      Approved_By:
+        description: 'Approved by: '
         required: true
         type: string
+
+      
         
 jobs:
   teams:  
@@ -13,11 +15,37 @@ jobs:
     environment: VARS3.0
 
     steps:
-      - name: Notify Teams
+      - name: Get Commit Message
+        id: get_msg
+        run: |
+            # Gets the subject line of the latest commit
+            MSG=$(git log -1 --pretty=%s)
+            echo "commit_msg=$MSG" >> $GITHUB_OUTPUT
+            
+      - name: Get Timestamp
+        id: timestamp
+        run: |
+          echo "time=$(TZ='Asia/Kolkata' date '+%d %b %Y, %I:%M %p IST')" >> $GITHUB_OUTPUT
+
+      - name: Notify Teams (Final Status)
+        if: always() # This ensures it runs even if previous steps failed
         uses: mikesprague/teams-incoming-webhook-action@v1
         with:
           github-token: ${{ github.token }}
-          webhook-url: ${{secrets.TEAMS_WEBHOOK_URL}}
-          message: "Hello, The changes got updates woth v - ${{github.event.inputs.Version}} "
-          title: "Manual Notification"
-          
+          webhook-url: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          # Dynamic title and color based on the job status
+          title: "${{ job.status == 'success' && '✅ Deployment Success' || '❌ Deployment Failed' }}"
+          color: "${{ job.status == 'success' && 'success' || 'failure' }}"
+          # message: "FlexOS PROD Prod updated with FE - Version no: ${{github.event.inputs.Version}}
+          #           status: **${{ job.status }}**"
+ 
+          message: |
+            **Repo:** ${{ github.repository }}
+            **Branch:** ${{ github.ref_name }}
+            **Commit:** ${{ github.sha }}
+            **Message:** ${{ steps.get_msg.outputs.commit_msg}}
+            Triggered By: ${{ github.actor }}
+            Approved By: ${{ inputs.Approved_By }}
+            Timestamp: ${{ steps.timestamp.outputs.time }}
+
+            
