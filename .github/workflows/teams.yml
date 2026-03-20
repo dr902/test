@@ -43,12 +43,12 @@ jobs:
           #           status: **${{ job.status }}**"
  
           message: |
-            **Repo:** ${{ github.repository }}
-            **Branch:** ${{ github.ref_name }}
-            **Commit:** ${{ github.sha }}
-            **Message:** ${{ steps.get_msg.outputs.commit_msg}}
-            Triggered By: ${{ github.actor }}
-            Approved By: ${{ inputs.Approved_By }}
-            Timestamp: ${{ steps.timestamp.outputs.time }}
+            **Repo:** ${{ github.repository }}\n\
+            **Branch:** ${{ github.ref_name }}\n\
+            **Commit:** ${{ github.sha }}\n\
+            **Message:** ${{ steps.get_msg.outputs.commit_msg}}\n\
+            **Triggered By:** ${{ github.actor }}\n\
+            **Approved By:** ${{ inputs.Approved_By }}\n\
+            **Timestamp:** ${{ steps.timestamp.outputs.time }}\n\
 
             
