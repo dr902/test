@@ -15,6 +15,9 @@ jobs:
     environment: VARS3.0
 
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        
       - name: Get Commit Message
         id: get_msg
         run: |
