@@ -1,0 +1,32 @@
+name: env-files
+
+on:
+  workflow_dispatch: 
+ 
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    environment: mobile
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Restore env files
+      run: |
+        echo "$ENV_ARCHIVE_BASE64" | base64 --decode > env.tar.gz
+        tar -xzf env.tar.gz
+
+        ls
+      
+        pwd
+        cd env
+        ls
+        
+      env:
+        ENV_ARCHIVE_BASE64: ${{ secrets.ENV}}
+        
+     
+
+      
