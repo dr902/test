@@ -39,21 +39,28 @@ jobs:
       - name: structuring data
         run: |
               
-              splitted_data=$(echo "${{inputs.Pointers}}" | sed -E 's/ *->>> */\n/g' | sed '/^$/d')
-              
-              echo "input data : ${{inputs.Pointers}}"
-              echo "formated data : $splitted_data"
-          
-              # Remove trailing comma safely
-              BULLET_ITEMS=$(echo "$splitted_data" | sed '$ s/,$//')
+              # 1. Split data, remove empty lines
+              # 2. Use jq to wrap each line in Jira's listItem/paragraph/text structure
+              # 3. Join them with commas using 'paste'
+              JSON_BULLETS=$(echo "${{ inputs.Pointers }}" | sed -E 's/ *->>> */\n/g' | sed '/^$/d' | \
+                jq -R -c '{
+                  type: "listItem",
+                  content: [{
+                    type: "paragraph",
+                    content: [{
+                      type: "text",
+                      text: .
+                    }]
+                  }]
+                }' | paste -sd, -)
 
-              echo "before env $BULLET_ITEMS"
-              # Save to env
-              echo "BULLET_ITEMS<<EOF" >> $GITHUB_ENV
-              echo "$BULLET_ITEMS" >> $GITHUB_ENV
-              echo "EOF" >> $GITHUB_ENV
-              echo "Bullet items : $BULLET_ITEMS"
-                  
+              echo "json data:========= $JSON_BULLETS"
+
+              # Save to env (no EOF needed here as it's now one long line of JSON objects)
+              echo "BULLET_ITEMS=$JSON_BULLETS" >> $GITHUB_ENV
+
+              echo "Bullet-data :======== $BULLET_ITEMS"
+                      
 
       - name: 🔍 Create Jira ticket (In Progress)
         id: jira_create
