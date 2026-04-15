@@ -1,9 +1,7 @@
-name: ADMIN FE DEV CI-CD with Jira
+name: Jira ticket creation
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch: 
 
 jobs:
   fe-deploy-with-jira:
@@ -11,7 +9,7 @@ jobs:
 
     env:
       JIRA_BASE_URL: https://tericsoft.atlassian.net
-      JIRA_EMAIL: sai@tericsoft.com
+      JIRA_EMAIL: durga.g@tericsoft.com
       JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
       JIRA_PROJECT_KEY: VIT
       ENVIRONMENT: DEV
@@ -27,9 +25,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-
-      - name: Install dependencies
-        run: yarn install
 
       - name: 🔍 Create Jira ticket (In Progress)
         id: jira_create
@@ -49,7 +44,7 @@ jobs:
             -d "{
               \"fields\": {
                 \"project\": { \"key\": \"$JIRA_PROJECT_KEY\" },
-                \"summary\": \"FE DEV Deployment - $ACTOR\",
+                \"summary\": \"Prod FE Deployment - $ACTOR\",
                 \"issuetype\": { \"name\": \"Task\" },
                 \"assignee\": { \"accountId\": \"$ACCOUNT_ID\" },
                 \"reporter\": { \"accountId\": \"$ACCOUNT_ID\" },
