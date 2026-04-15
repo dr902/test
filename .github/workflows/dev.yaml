@@ -2,6 +2,16 @@ name: Jira ticket creation
 
 on:
   workflow_dispatch: 
+    inputs:
+      Approved_By:
+        description: 'Approved by: '
+        required: true
+        type: string
+
+      Pointers:
+        description: 'Pointers: '
+        required: true
+        type: string
 
 jobs:
   fe-deploy-with-jira:
@@ -25,6 +35,37 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
+
+      - name: structuring data
+        run: |
+          
+            # 🔹 Split input into array
+            IFS='->>>' read -ra ITEMS <<< "${{inputs.Pointers}}"
+            
+            # 🔹 Build bullet list JSON
+            BULLET_ITEMS=""
+            
+            for item in "${ITEMS[@]}"; do
+              CLEANED_ITEM=$(echo "$item" | xargs)
+            
+              BULLET_ITEMS+="
+                {
+                  \"type\": \"listItem\",
+                  \"content\": [
+                    {
+                      \"type\": \"paragraph\",
+                      \"content\": [
+                        { \"type\": \"text\", \"text\": \"$CLEANED_ITEM\" }
+                      ]
+                    }
+                  ]
+                },"
+            done
+            
+            # 🔹 Remove trailing comma
+            BULLET_ITEMS=$(echo "$BULLET_ITEMS" | sed '$ s/,$//')
+
+            
 
       - name: 🔍 Create Jira ticket (In Progress)
         id: jira_create
@@ -54,14 +95,36 @@ jobs:
                   \"type\": \"doc\",
                   \"version\": 1,
                   \"content\": [
-                    {
-                      \"type\": \"paragraph\",
-                      \"content\": [{\"type\": \"text\", \"text\": \"Deployment started by $ACTOR\"}]
-                    },
-                    {
-                      \"type\": \"paragraph\",
-                      \"content\": [{\"type\": \"text\", \"text\": \"Standup Date: $TODAY\"}]
-                    }
+                            {
+                              \"type\": \"paragraph\",
+                              \"content\": [
+                                { \"type\": \"text\", \"text\": \"Deployment Summary:\" }
+                              ]
+                            },
+                            {
+                              \"type\": \"paragraph\",
+                              \"content\": [
+                                { \"type\": \"text\", \"text\": \"This release includes the following updates:\" }
+                              ]
+                            },
+                            {
+                              \"type\": \"bulletList\",
+                              \"content\": [
+                                $BULLET_ITEMS
+                              ]
+                            },
+                            {
+                              \"type\": \"paragraph\",
+                              \"content\": [
+                                { \"type\": \"text\", \"text\": \"Requested by: ${{inputs.Approved_By}}\" }
+                              ]
+                            },
+                            {
+                              \"type\": \"paragraph\",
+                              \"content\": [
+                                { \"type\": \"text\", \"text\": \"Date: $TODAY\" }
+                              ]
+                            }
                   ]
                 }
               }
