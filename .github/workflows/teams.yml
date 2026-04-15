@@ -18,8 +18,16 @@ jobs:
   teams:  
     runs-on: ubuntu-22.04
     environment: VARS3.0
-
+    env:
+      JIRA_BASE_URL: https://tericsoft.atlassian.net
+      JIRA_EMAIL: sai@tericsoft.com
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      JIRA_PROJECT_KEY: VIT
+      
     steps:
+      - name: ⏱ Capture start time
+        run: echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
+
       - name: Checkout Code
         uses: actions/checkout@v4
         
@@ -29,34 +37,207 @@ jobs:
             # Gets the subject line of the latest commit
             MSG=$(git log -1 --pretty=%s)
             echo "commit_msg=$MSG" >> $GITHUB_OUTPUT
-            
+         
       - name: Get Timestamp
         id: timestamp
         run: |
           echo "time=$(TZ='Asia/Kolkata' date '+%d %b %Y, %I:%M %p IST')" >> $GITHUB_OUTPUT
 
-      - name: Notify Teams (Final Status)
-        if: always() # This ensures it runs even if previous steps failed
-        uses: mikesprague/teams-incoming-webhook-action@v1
-        with:
-          github-token: ${{ github.token }}
-          webhook-url: ${{ secrets.TEAMS_WEBHOOK_URL }}
-          # Dynamic title and color based on the job status
-          title: "${{ job.status == 'success' && '✅ Deployment Success - Prod BE' || '❌ Deployment Failed -Prod BE' }}"
-          color: "${{ job.status == 'success' && 'success' || 'failure' }}"
-          # message: "FlexOS PROD Prod updated with FE - Version no: ${{github.event.inputs.Version}}
-          #           status: **${{ job.status }}**"
+      # - name: Notify Teams (Final Status)
+      #   if: always() # This ensures it runs even if previous steps failed
+      #   uses: mikesprague/teams-incoming-webhook-action@v1
+      #   with:
+      #     github-token: ${{ github.token }}
+      #     webhook-url: ${{ secrets.TEAMS_WEBHOOK_URL }}
+      #     # Dynamic title and color based on the job status
+      #     title: "${{ job.status == 'success' && '✅ Deployment Success - Prod BE' || '❌ Deployment Failed -Prod BE' }}"
+      #     color: "${{ job.status == 'success' && 'success' || 'failure' }}"
+      #     # message: "FlexOS PROD Prod updated with FE - Version no: ${{github.event.inputs.Version}}
+      #     #           status: **${{ job.status }}**"
  
-          message: |
-            **Pointers:** ${{inputs.Pointers}}\
-            **Approved By:** ${{ inputs.Approved_By }}\
-            **Message:** ${{ steps.get_msg.outputs.commit_msg}}\
-            **Timestamp:** ${{ steps.timestamp.outputs.time }}\
-            \
-            **Repo:** ${{ github.repository }}\
-            **Branch:** ${{ github.ref_name }}\
-            **Commit:** ${{ github.sha }}\
-            **Triggered By:** ${{ github.actor }}\
+      #     message: |
+      #       **Pointers:** ${{inputs.Pointers}}\
+      #       **Approved By:** ${{ inputs.Approved_By }}\
+      #       **Message:** ${{ steps.get_msg.outputs.commit_msg}}\
+      #       **Timestamp:** ${{ steps.timestamp.outputs.time }}\
+      #       \
+      #       **Repo:** ${{ github.repository }}\
+      #       **Branch:** ${{ github.ref_name }}\
+      #       **Commit:** ${{ github.sha }}\
+      #       **Triggered By:** ${{ github.actor }}\
             
 
-            
+      - name: 🔍 Create Jira ticket (In Progress)
+        id: jira_create
+        run: |
+          set -e
+      
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+      
+          ACTOR="${{ github.actor }}"
+          TODAY=$(date +'%Y-%m-%d')
+      
+          # 🔹 Input from workflow_dispatch
+          CHANGES="${{ github.event.inputs.Pointers }}"
+      
+          echo "Raw Input:"
+          echo "$CHANGES"
+      
+          # 🔹 Normalize input (supports both multiline & ->>> format)
+          CLEANED=$(echo "$CHANGES" | sed 's/->>> /\n/g')
+      
+          echo "Normalized Input:"
+          echo "$CLEANED"
+      
+          # 🔹 Build Jira ADF Description
+          DESCRIPTION=$(echo "$CLEANED" | jq -R -s '
+            split("\n")
+            | map(select(length > 0))
+            | {
+                type: "doc",
+                version: 1,
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [
+                      { type: "text", text: "These are the changes getting deployed:" }
+                    ]
+                  },
+                  {
+                    type: "bulletList",
+                    content: map({
+                      type: "listItem",
+                      content: [
+                        {
+                          type: "paragraph",
+                          content: [
+                            { type: "text", text: . }
+                          ]
+                        }
+                      ]
+                    })
+                  },
+                  {
+                    type: "paragraph",
+                    content: [
+                      { type: "text", text: "" }
+                    ]
+                  },
+                  {
+                    type: "paragraph",
+                    content: [
+                      { type: "text", text: "Deployment started by '"$ACTOR"'" }
+                    ]
+                  },
+                  {
+                    type: "paragraph",
+                    content: [
+                      { type: "text", text: "Standup Date: '"$TODAY"'" }
+                    ]
+                  }
+                ]
+              }
+          ')
+      
+          # 🔹 Get Jira Account ID
+          ACCOUNT_ID=$(curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            "$JIRA_BASE_URL/rest/api/3/user/search?query=$ACTOR" | jq -r '.[0].accountId')
+      
+          # 🔹 Create Jira Issue
+          ISSUE_KEY=$(curl -s -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$JIRA_BASE_URL/rest/api/3/issue" \
+            -d "{
+              \"fields\": {
+                \"project\": { \"key\": \"$JIRA_PROJECT_KEY\" },
+                \"summary\": \"FE DEV Deployment - $ACTOR\",
+                \"issuetype\": { \"name\": \"Task\" },
+                \"assignee\": { \"accountId\": \"$ACCOUNT_ID\" },
+                \"reporter\": { \"accountId\": \"$ACCOUNT_ID\" },
+                \"duedate\": \"$TODAY\",
+                \"customfield_10043\": \"$TODAY\",
+                \"description\": $DESCRIPTION
+              }
+            }" | jq -r '.key')
+      
+          # 🔹 Validate Issue Creation
+          if [ "$ISSUE_KEY" = "null" ] || [ -z "$ISSUE_KEY" ]; then
+            echo "❌ Jira ticket creation failed"
+            exit 1
+          fi
+      
+          # 🔹 Outputs
+          echo "ISSUE_KEY=$ISSUE_KEY" >> $GITHUB_ENV
+          echo "jira_url=https://tericsoft.atlassian.net/browse/$ISSUE_KEY" >> $GITHUB_OUTPUT
+      
+          echo "===================================="
+          echo "✅ Jira Ticket Created:"
+          echo "https://tericsoft.atlassian.net/browse/$ISSUE_KEY"
+          echo "===================================="    
+
+      - name: wiating
+        run: wait 30
+        
+      - name: ⏱ Capture end time
+        run: echo "END_TIME=$(date +%s)" >> $GITHUB_ENV
+        
+      - name: ✅ Update Jira on SUCCESS
+        if: success()
+        run: |
+          DURATION=$((END_TIME - START_TIME))
+          [ "$DURATION" -lt 60 ] && DURATION=60
+          echo "Actual deployment time: $DURATION seconds"
+          # Update Original Estimate (timeoriginalestimate) and Worklog
+          curl -X PUT -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$JIRA_BASE_URL/rest/api/3/issue/$ISSUE_KEY" \
+            -d "{
+              \"fields\": {
+                \"timeoriginalestimate\": $DURATION
+              }
+            }"
+          curl -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$JIRA_BASE_URL/rest/api/3/issue/$ISSUE_KEY/worklog" \
+            -d "{\"timeSpentSeconds\": $DURATION}"
+          # Transition to Done
+          TRANSITION_ID=$(curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            "$JIRA_BASE_URL/rest/api/3/issue/$ISSUE_KEY/transitions" \
+            | jq -r '.transitions[] | select(.name=="Done") | .id')
+          curl -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$JIRA_BASE_URL/rest/api/3/issue/$ISSUE_KEY/transitions" \
+            -d "{\"transition\": {\"id\": \"$TRANSITION_ID\"}}"
+      - name: ❌ Update Jira on FAILURE
+        if: failure()
+        run: |
+          DURATION=$((END_TIME - START_TIME))
+          [ "$DURATION" -lt 60 ] && DURATION=60
+          echo "Deployment failed after $DURATION seconds"
+          ERROR_MSG="Deployment failed. See logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          # Update Original Estimate even on failure
+          curl -X PUT -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$JIRA_BASE_URL/rest/api/3/issue/$ISSUE_KEY" \
+            -d "{
+              \"fields\": {
+                \"timeoriginalestimate\": $DURATION,
+                \"description\": {
+                  \"type\": \"doc\",
+                  \"version\": 1,
+                  \"content\": [{
+                    \"type\": \"paragraph\",
+                    \"content\": [{\"type\": \"text\", \"text\": \"$ERROR_MSG\"}]
+                  }]
+                }
+              }
+            }"
+          # Transition to Rejected
+          TRANSITION_ID=$(curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            "$JIRA_BASE_URL/rest/api/3/issue/$ISSUE_KEY/transitions" \
+            | jq -r '.transitions[] | select(.name=="Rejected") | .id')
+          curl -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$JIRA_BASE_URL/rest/api/3/issue/$ISSUE_KEY/transitions" \
+            -d "{\"transition\": {\"id\": \"$TRANSITION_ID\"}}"
