@@ -1,0 +1,175 @@
+name: ADMIN FE DEV CI-CD with Jira
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  fe-deploy-with-jira:
+    runs-on: ubuntu-latest
+
+    env:
+      JIRA_BASE_URL: https://tericsoft.atlassian.net
+      JIRA_EMAIL: sai@tericsoft.com
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      JIRA_PROJECT_KEY: VIT
+      ENVIRONMENT: DEV
+
+    steps:
+      - name: ⏱ Capture start time
+        run: echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: 🔍 Create Jira ticket (In Progress)
+        id: jira_create
+        run: |
+          set -e
+          sudo apt-get install -y jq
+
+          ACTOR="${{ github.actor }}"
+          TODAY=$(date +'%Y-%m-%d')
+
+          ACCOUNT_ID=$(curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            "$JIRA_BASE_URL/rest/api/3/user/search?query=$ACTOR" | jq -r '.[0].accountId')
+
+          ISSUE_KEY=$(curl -s -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$JIRA_BASE_URL/rest/api/3/issue" \
+            -d "{
+              \"fields\": {
+                \"project\": { \"key\": \"$JIRA_PROJECT_KEY\" },
+                \"summary\": \"FE DEV Deployment - $ACTOR\",
+                \"issuetype\": { \"name\": \"Task\" },
+                \"assignee\": { \"accountId\": \"$ACCOUNT_ID\" },
+                \"reporter\": { \"accountId\": \"$ACCOUNT_ID\" },
+                \"duedate\": \"$TODAY\",
+                \"customfield_10043\": \"$TODAY\",
+                \"description\": {
+                  \"type\": \"doc\",
+                  \"version\": 1,
+                  \"content\": [
+                    {
+                      \"type\": \"paragraph\",
+                      \"content\": [{\"type\": \"text\", \"text\": \"Deployment started by $ACTOR\"}]
+                    },
+                    {
+                      \"type\": \"paragraph\",
+                      \"content\": [{\"type\": \"text\", \"text\": \"Standup Date: $TODAY\"}]
+                    }
+                  ]
+                }
+              }
+            }" | jq -r '.key')
+
+          echo "ISSUE_KEY=$ISSUE_KEY" >> $GITHUB_ENV
+          echo "jira_url=https://tericsoft.atlassian.net/browse/$ISSUE_KEY" >> $GITHUB_OUTPUT
+
+          echo "===================================="
+          echo "Jira Ticket Created:"
+          echo "https://tericsoft.atlassian.net/browse/$ISSUE_KEY"
+          echo "===================================="
+
+      - name: Build DEV
+        run: |
+          export NODE_OPTIONS=--max-old-space-size=4096
+          yarn build:dev
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to S3
+        run: aws s3 sync dist s3://${{ secrets.S3_BUCKET_DEV }} --delete
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_DEV }}" \
+            --paths "/*"
+
+      - name: ⏱ Capture end time
+        run: echo "END_TIME=$(date +%s)" >> $GITHUB_ENV
+
+      - name: ✅ Update Jira on SUCCESS
+        if: success()
+        run: |
+          DURATION=$((END_TIME - START_TIME))
+          [ "$DURATION" -lt 60 ] && DURATION=60
+
+          echo "Actual deployment time: $DURATION seconds"
+
+          # Update Original Estimate (timeoriginalestimate) and Worklog
+          curl -X PUT -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$JIRA_BASE_URL/rest/api/3/issue/$ISSUE_KEY" \
+            -d "{
+              \"fields\": {
+                \"timeoriginalestimate\": $DURATION
+              }
+            }"
+
+          curl -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$JIRA_BASE_URL/rest/api/3/issue/$ISSUE_KEY/worklog" \
+            -d "{\"timeSpentSeconds\": $DURATION}"
+
+          # Transition to Done
+          TRANSITION_ID=$(curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            "$JIRA_BASE_URL/rest/api/3/issue/$ISSUE_KEY/transitions" \
+            | jq -r '.transitions[] | select(.name=="Done") | .id')
+
+          curl -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$JIRA_BASE_URL/rest/api/3/issue/$ISSUE_KEY/transitions" \
+            -d "{\"transition\": {\"id\": \"$TRANSITION_ID\"}}"
+
+      - name: ❌ Update Jira on FAILURE
+        if: failure()
+        run: |
+          DURATION=$((END_TIME - START_TIME))
+          [ "$DURATION" -lt 60 ] && DURATION=60
+          echo "Deployment failed after $DURATION seconds"
+
+          ERROR_MSG="Deployment failed. See logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          # Update Original Estimate even on failure
+          curl -X PUT -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$JIRA_BASE_URL/rest/api/3/issue/$ISSUE_KEY" \
+            -d "{
+              \"fields\": {
+                \"timeoriginalestimate\": $DURATION,
+                \"description\": {
+                  \"type\": \"doc\",
+                  \"version\": 1,
+                  \"content\": [{
+                    \"type\": \"paragraph\",
+                    \"content\": [{\"type\": \"text\", \"text\": \"$ERROR_MSG\"}]
+                  }]
+                }
+              }
+            }"
+
+          # Transition to Rejected
+          TRANSITION_ID=$(curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            "$JIRA_BASE_URL/rest/api/3/issue/$ISSUE_KEY/transitions" \
+            | jq -r '.transitions[] | select(.name=="Rejected") | .id')
+
+          curl -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$JIRA_BASE_URL/rest/api/3/issue/$ISSUE_KEY/transitions" \
+            -d "{\"transition\": {\"id\": \"$TRANSITION_ID\"}}"
