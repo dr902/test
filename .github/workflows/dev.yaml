@@ -38,39 +38,46 @@ jobs:
 
       - name: structuring data
         run: |
+              
+              # 🔥 Normalize input (remove newlines)
+              CLEAN_INPUT=$(echo "$INPUT" | tr '\n' ' ')
           
-            # 🔹 Split input into array
-            IFS='->>>' read -ra ITEMS <<< "${{inputs.Pointers}}"
-            
-            # 🔹 Build bullet list JSON
-            BULLET_ITEMS=""
-            
-            for item in "${ITEMS[@]}"; do
-              CLEANED_ITEM=$(echo "$item" | xargs)
-            
-              BULLET_ITEMS+="
-                {
-                  \"type\": \"listItem\",
-                  \"content\": [
-                    {
-                      \"type\": \"paragraph\",
-                      \"content\": [
-                        { \"type\": \"text\", \"text\": \"$CLEANED_ITEM\" }
-                      ]
-                    }
-                  ]
-                },"
-            done
-            
-            # 🔹 Remove trailing comma
-            BULLET_ITEMS=$(echo "$BULLET_ITEMS" | sed '$ s/,$//')
-
-            # 🔥 Save variables for next step
-            echo "BULLET_ITEMS<<EOF" >> $GITHUB_ENV
-            echo "$BULLET_ITEMS" >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-
-            
+              # 🔹 Split ONLY on ->>>
+              IFS='->>>' read -ra ITEMS <<< "$CLEAN_INPUT"
+          
+              BULLET_ITEMS=""
+          
+              for item in "${ITEMS[@]}"; do
+                # trim spaces
+                CLEANED_ITEM=$(echo "$item" | xargs)
+          
+                # 🔥 skip empty items
+                if [ -z "$CLEANED_ITEM" ]; then
+                  continue
+                fi
+          
+                BULLET_ITEMS+="
+                  {
+                    \"type\": \"listItem\",
+                    \"content\": [
+                      {
+                        \"type\": \"paragraph\",
+                        \"content\": [
+                          { \"type\": \"text\", \"text\": \"$CLEANED_ITEM\" }
+                        ]
+                      }
+                    ]
+                  },"
+              done
+          
+              # Remove trailing comma safely
+              BULLET_ITEMS=$(echo "$BULLET_ITEMS" | sed '$ s/,$//')
+          
+              # Save to env
+              echo "BULLET_ITEMS<<EOF" >> $GITHUB_ENV
+              echo "$BULLET_ITEMS" >> $GITHUB_ENV
+              echo "EOF" >> $GITHUB_ENV
+                  
 
       - name: 🔍 Create Jira ticket (In Progress)
         id: jira_create
