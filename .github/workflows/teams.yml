@@ -1,9 +1,7 @@
 name: ADMIN FE DEV CI-CD with Jira
 
 on:
-  push:
-    branches:
-      - Jira_Testing
+  workflow_dispatch: 
 
 jobs:
   fe-deploy-with-jira:
@@ -29,7 +27,7 @@ jobs:
           node-version: '20.x'
 
       - name: Install dependencies
-        run: yarn install
+        run: sleep 30
 
       - name: 🔍 Create Jira ticket (In Progress)
         id: jira_create
@@ -74,25 +72,8 @@ jobs:
           echo "Jira Ticket Created:"
           echo "https://tericsoft.atlassian.net/browse/$ISSUE_KEY"
           echo "===================================="
-      - name: Build DEV
-        run: |
-          export NODE_OPTIONS=--max-old-space-size=4096
-          yarn build:dev
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy to S3
-        run: aws s3 sync dist s3://${{ secrets.S3_BUCKET_DEV }} --delete
-
-      - name: Invalidate CloudFront cache
-        run: |
-          aws cloudfront create-invalidation \
-            --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_DEV }}" \
-            --paths "/*"
+      
       - name: ⏱ Capture end time
         run: echo "END_TIME=$(date +%s)" >> $GITHUB_ENV
 
