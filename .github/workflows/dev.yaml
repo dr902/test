@@ -36,7 +36,7 @@ jobs:
           TODAY=$(date +'%Y-%m-%d')
 
           ACCOUNT_ID=$(curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
-            "$JIRA_BASE_URL/rest/api/3/user/search?query=$ACTOR" | jq -r '.[0].accountId')
+            "$JIRA_BASE_URL/rest/api/3/myself" | jq -r '.accountId')
 
           ISSUE_KEY=$(curl -s -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
             -H "Content-Type: application/json" \
