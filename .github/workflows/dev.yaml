@@ -65,6 +65,11 @@ jobs:
             # 🔹 Remove trailing comma
             BULLET_ITEMS=$(echo "$BULLET_ITEMS" | sed '$ s/,$//')
 
+            # 🔥 Save variables for next step
+            echo "BULLET_ITEMS<<EOF" >> $GITHUB_ENV
+            echo "$BULLET_ITEMS" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+
             
 
       - name: 🔍 Create Jira ticket (In Progress)
@@ -131,6 +136,12 @@ jobs:
             }" | jq -r '.key')
             
           echo "issues key :- $ISSUE_KEY "
+          
+          if [ "$ISSUE_KEY" == "null" ] || [ -z "$ISSUE_KEY" ]; then
+            echo "❌ Jira ticket creation failed"
+            exit 1
+          fi
+
           echo " account id :- $ACCOUNT_ID "
           
           echo "ISSUE_KEY=$ISSUE_KEY" >> $GITHUB_ENV
