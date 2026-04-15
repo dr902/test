@@ -66,7 +66,10 @@ jobs:
                 }
               }
             }" | jq -r '.key')
-
+            
+          echo "issues key :- $ISSUE_KEY "
+          echo " account id :- $ACCOUNT_ID "
+          
           echo "ISSUE_KEY=$ISSUE_KEY" >> $GITHUB_ENV
           echo "jira_url=https://tericsoft.atlassian.net/browse/$ISSUE_KEY" >> $GITHUB_OUTPUT
 
@@ -75,26 +78,10 @@ jobs:
           echo "https://tericsoft.atlassian.net/browse/$ISSUE_KEY"
           echo "===================================="
 
-      - name: Build DEV
+      - name: wait
         run: |
-          export NODE_OPTIONS=--max-old-space-size=4096
-          yarn build:dev
+          sleep 30
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Deploy to S3
-        run: aws s3 sync dist s3://${{ secrets.S3_BUCKET_DEV }} --delete
-
-      - name: Invalidate CloudFront cache
-        run: |
-          aws cloudfront create-invalidation \
-            --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_DEV }}" \
-            --paths "/*"
 
       - name: ⏱ Capture end time
         run: echo "END_TIME=$(date +%s)" >> $GITHUB_ENV
