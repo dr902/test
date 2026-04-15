@@ -40,7 +40,7 @@ jobs:
         run: |
               
               # 🔥 Normalize input (remove newlines)
-              CLEAN_INPUT=$(echo "$INPUT" | tr '\n' ' ')
+              CLEAN_INPUT=$(echo "${{inputs.Pointers}}" | tr '\n' ' ')
           
               # 🔹 Split ONLY on ->>>
               IFS='->>>' read -ra ITEMS <<< "$CLEAN_INPUT"
@@ -91,7 +91,7 @@ jobs:
           ACCOUNT_ID=$(curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
             "$JIRA_BASE_URL/rest/api/3/myself" | jq -r '.accountId')
 
-          ISSUE_KEY=$(curl -s -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+          Responce=$(curl -s -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
             -H "Content-Type: application/json" \
             "$JIRA_BASE_URL/rest/api/3/issue" \
             -d "{
@@ -140,7 +140,12 @@ jobs:
                   ]
                 }
               }
-            }" | jq -r '.key')
+            }")
+
+          echo "🔍 Jira Response:"
+          echo "$Responce" | jq .
+          
+          ISSUE_KEY=$(echo "$Responce" | jq -r '.key')
             
           echo "issues key :- $ISSUE_KEY "
           
