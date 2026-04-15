@@ -39,36 +39,20 @@ jobs:
       - name: structuring data
         run: |
               
-              echo "${{inputs.Pointers}}" | awk -F '->>>' '{for(i=1;i<=NF;i++) print $i}' | while read -r item; do
-
-                CLEANED_ITEM=$(echo "$item" | sed 's/^[ \t]*//;s/[ \t]*$//')
+              splitted_data=echo "${{inputs.Pointers}}" | sed -E 's/ *->>> */\n/g'
               
-                if [ -z "$CLEANED_ITEM" ]; then
-                  continue
-                fi
-              
-                BULLET_ITEMS+="
-                  {
-                    \"type\": \"listItem\",
-                    \"content\": [
-                      {
-                        \"type\": \"paragraph\",
-                        \"content\": [
-                          { \"type\": \"text\", \"text\": \"$CLEANED_ITEM\" }
-                        ]
-                      }
-                    ]
-                  },"
-              
-              done
+              echo "input data : ${{inputs.Pointers}}"
+              echo "formated data : $splitted_data"
           
               # Remove trailing comma safely
-              BULLET_ITEMS=$(echo "$BULLET_ITEMS" | sed '$ s/,$//')
-          
+              BULLET_ITEMS=$(echo "$splitted_data" | sed '$ s/,$//')
+
+              echo "before env $BULLET_ITEMS"
               # Save to env
               echo "BULLET_ITEMS<<EOF" >> $GITHUB_ENV
               echo "$BULLET_ITEMS" >> $GITHUB_ENV
               echo "EOF" >> $GITHUB_ENV
+              echo "Bullet items : $BULLET_ITEMS"
                   
 
       - name: 🔍 Create Jira ticket (In Progress)
