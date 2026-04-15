@@ -39,23 +39,14 @@ jobs:
       - name: structuring data
         run: |
               
-              # 🔥 Normalize input (remove newlines)
-              CLEAN_INPUT=$(echo "${{inputs.Pointers}}" | tr '\n' ' ')
-          
-              # 🔹 Split ONLY on ->>>
-              IFS='->>>' read -ra ITEMS <<< "$CLEAN_INPUT"
-          
-              BULLET_ITEMS=""
-          
-              for item in "${ITEMS[@]}"; do
-                # trim spaces
-                CLEANED_ITEM=$(echo "$item" | xargs)
-          
-                # 🔥 skip empty items
+              echo "${{inputs.Pointers}}" | awk -F '->>>' '{for(i=1;i<=NF;i++) print $i}' | while read -r item; do
+
+                CLEANED_ITEM=$(echo "$item" | sed 's/^[ \t]*//;s/[ \t]*$//')
+              
                 if [ -z "$CLEANED_ITEM" ]; then
                   continue
                 fi
-          
+              
                 BULLET_ITEMS+="
                   {
                     \"type\": \"listItem\",
@@ -68,6 +59,7 @@ jobs:
                       }
                     ]
                   },"
+              
               done
           
               # Remove trailing comma safely
