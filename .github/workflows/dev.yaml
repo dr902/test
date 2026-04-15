@@ -39,7 +39,7 @@ jobs:
       - name: structuring data
         run: |
               
-              splitted_data=echo "${{inputs.Pointers}}" | sed -E 's/ *->>> */\n/g'
+              splitted_data=$(echo "${{inputs.Pointers}}" | sed -E 's/ *->>> */\n/g' | sed '/^$/d')
               
               echo "input data : ${{inputs.Pointers}}"
               echo "formated data : $splitted_data"
