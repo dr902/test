@@ -1,4 +1,4 @@
-name: Jira ticket creation
+name: Jira-ticket-creation
 
 on:
   workflow_dispatch:
