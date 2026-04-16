@@ -81,6 +81,7 @@ jobs:
               \"fields\": {
                 \"project\": { \"key\": \"$JIRA_PROJECT_KEY\" },
                 \"summary\": \"Prod FE Deployment - $ACTOR\",
+                \"labels\": [\"DevOps\", \"Deployment\"],
                 \"issuetype\": { \"name\": \"Task\" },
                 \"assignee\": { \"accountId\": \"$ACCOUNT_ID\" },
                 \"reporter\": { \"accountId\": \"$ACCOUNT_ID\" },
