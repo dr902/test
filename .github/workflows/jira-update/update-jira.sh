@@ -32,15 +32,6 @@ if [ "$JOB_STATUS" == "success" ]; then
     echo "🎉 [SUCCESS FLOW] Deployment completed successfully"
     echo "--------------------------------------------------"
 
-    # Update Original Estimate
-    echo "📝 [STEP 2] Updating time estimate in Jira..."
-    curl -s -X PUT -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
-      -H "Content-Type: application/json" \
-      "$JIRA_BASE_URL/rest/api/3/issue/$ISSUE_KEY" \
-      -d "{\"fields\": {\"timeoriginalestimate\": $DURATION}}"
-
-    echo "✅ Time estimate updated"
-
     # Log Work
     echo "⏳ [STEP 3] Logging work duration..."
     curl -s -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
