@@ -1,0 +1,62 @@
+name: Jira ticket creation
+
+on:
+  workflow_dispatch:
+    inputs:
+      Pointers:
+        description: 'Changes are:'
+        required: true
+        type: string
+
+      Approved_By:
+        description: 'Approved by: '
+        required: true
+        type: string
+
+jobs:
+  jira-updates-in-deployment:
+    runs-on: ubuntu-22.04
+
+    env:
+      JIRA_BASE_URL: https://tericsoft.atlassian.net
+      JIRA_EMAIL: durga.g@tericsoft.com
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      JIRA_PROJECT_KEY: VIT
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ⏱ Start Time Capture
+        run: echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
+
+      - name: 🎫 Create Jira Ticket
+        env:
+          INPUT_POINTERS: ${{ inputs.Pointers }}
+          INPUT_APPROVED_BY: ${{ inputs.Approved_By }}
+         
+        run: |
+          chmod +x ./jira-update/create-jira.sh
+          ./jira-update/create-jira.sh
+
+      # --- YOUR DEPLOYMENT STEPS HERE ---
+      - name: Deploy
+        run: sleep 5 # Simulated deployment
+
+      - name: ⏱ End Time Capture
+        if: always()
+        run: echo "END_TIME=$(date +%s)" >> $GITHUB_ENV
+
+      - name: 🔄 Update Jira
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          ISSUE_KEY: ${{ env.ISSUE_KEY }}     # Picked up from pipeline env
+          START_TIME: ${{ env.START_TIME }}   # Picked up from pipeline env
+          END_TIME: ${{ env.END_TIME }}       # Picked up from pipeline env
+        run: |
+          chmod +x ./jira-update/update-jira.sh
+          ./jira-update/update-jira.sh
+    
+  
+      
