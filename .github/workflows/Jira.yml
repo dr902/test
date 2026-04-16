@@ -55,7 +55,7 @@ jobs:
           START_TIME: ${{ env.START_TIME }}   # Picked up from pipeline env
           END_TIME: ${{ env.END_TIME }}       # Picked up from pipeline env
         run: |
-          chmod +x ..github/workflows/jira-update/update-jira.sh
+          chmod +x .github/workflows/jira-update/update-jira.sh
           .github/workflows/jira-update/update-jira.sh
     
   
