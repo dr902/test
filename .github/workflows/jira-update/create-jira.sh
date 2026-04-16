@@ -58,7 +58,7 @@ RESPONSE=$(curl -s -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
   -d "{
     \"fields\": {
       \"project\": { \"key\": \"$JIRA_PROJECT_KEY\" },
-      \"summary\": \"Prod FE Deployment - $GITHUB_ACTOR\",
+      \"summary\": \"Prod $Service Deployment\",
       \"labels\": [\"DevOps\", \"Deployment\"],
       \"issuetype\": { \"name\": \"Task\" },
       \"assignee\": { \"accountId\": \"$ACCOUNT_ID\" },
