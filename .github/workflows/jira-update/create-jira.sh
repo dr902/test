@@ -1,7 +1,12 @@
 #!/bin/bash
 set -e
 
+echo "🚀 [START] Jira Ticket Creation Process"
+echo "--------------------------------------------------"
+
 # 1. Structure the Pointers into Jira JSON
+echo "📌 [STEP 1] Formatting deployment pointers..."
+
 JSON_BULLETS=$(echo "$INPUT_POINTERS" | sed -E 's/ *->>> */\n/g' | sed '/^$/d' | \
   jq -R -c '{
     type: "listItem",
@@ -14,12 +19,39 @@ JSON_BULLETS=$(echo "$INPUT_POINTERS" | sed -E 's/ *->>> */\n/g' | sed '/^$/d' |
     }]
   }' | paste -sd, -)
 
+if [ -z "$JSON_BULLETS" ]; then
+  echo "⚠️ [WARNING] No pointers provided or formatting failed."
+else
+  echo "✅ [SUCCESS] Pointers formatted successfully."
+fi
+
+echo "--------------------------------------------------"
+
 # 2. Get Jira Account ID
-ACCOUNT_ID=$(curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
-  "$JIRA_BASE_URL/rest/api/3/myself" | jq -r '.accountId')
+echo "👤 [STEP 2] Fetching Jira account ID for: $JIRA_EMAIL"
+
+ACCOUNT_RESPONSE=$(curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+  "$JIRA_BASE_URL/rest/api/3/myself")
+
+ACCOUNT_ID=$(echo "$ACCOUNT_RESPONSE" | jq -r '.accountId')
+
+if [ "$ACCOUNT_ID" == "null" ] || [ -z "$ACCOUNT_ID" ]; then
+  echo "❌ [ERROR] Failed to fetch Jira account ID"
+  echo "$ACCOUNT_RESPONSE" | jq .
+  exit 1
+fi
+
+echo "✅ [SUCCESS] Account ID fetched: $ACCOUNT_ID"
+echo "--------------------------------------------------"
 
 # 3. Create the Ticket
+echo "🎟️ [STEP 3] Creating Jira ticket..."
+
 TODAY=$(date +'%Y-%m-%d')
+echo "📅 Deployment Date: $TODAY"
+echo "👤 Requested By: $INPUT_APPROVED_BY"
+echo "🧑 Triggered By (GitHub Actor): $GITHUB_ACTOR"
+
 RESPONSE=$(curl -s -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
   -H "Content-Type: application/json" \
   "$JIRA_BASE_URL/rest/api/3/issue" \
@@ -48,11 +80,19 @@ RESPONSE=$(curl -s -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
 ISSUE_KEY=$(echo "$RESPONSE" | jq -r '.key')
 
 if [ "$ISSUE_KEY" == "null" ] || [ -z "$ISSUE_KEY" ]; then
-  echo "❌ Error creating Jira ticket:"
+  echo "❌ [ERROR] Jira ticket creation failed"
+  echo "🔍 Response:"
   echo "$RESPONSE" | jq .
   exit 1
 fi
 
+echo "--------------------------------------------------"
+echo "🎉 [SUCCESS] Jira Ticket Created Successfully!"
+echo "🔑 Issue Key: $ISSUE_KEY"
+echo "🔗 URL: $JIRA_BASE_URL/browse/$ISSUE_KEY"
+
 # Export ISSUE_KEY to GitHub Env so the update script can use it
 echo "ISSUE_KEY=$ISSUE_KEY" >> "$GITHUB_ENV"
-echo "✅ Created: $ISSUE_KEY"
+
+echo "--------------------------------------------------"
+echo "🏁 [END] Jira Ticket Creation Completed"
