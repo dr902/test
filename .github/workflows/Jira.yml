@@ -34,6 +34,7 @@ jobs:
         env:
           INPUT_POINTERS: ${{ inputs.Pointers }}
           INPUT_APPROVED_BY: ${{ inputs.Approved_By }}
+          Service: backend
          
         run: |
           chmod +x .github/workflows/jira-update/create-jira.sh
