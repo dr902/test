@@ -1,0 +1,30 @@
+name: RBACs for GitHUb
+
+on:
+  workflow_dispatch:
+    
+permissions:
+  id-token: write   # REQUIRED for OIDC
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::366115556563:role/GitHubActions-Policy
+          aws-region: us-east-2
+
+      - name: Verify Identity
+        run: aws sts get-caller-identity
+
+      - name: S3 validation
+        run: |
+              echo "checking S3 permissions"
+              aws s3 ls
